@@ -1,4 +1,7 @@
-import { App, Editor, MarkdownView, Modal, Notice, parseYaml, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView,
+	Modal, Notice, parseYaml, Plugin,
+	PluginSettingTab, Setting, TFile
+} from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
@@ -28,67 +31,49 @@ export default class PlayWithCheckboxs extends Plugin {
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
 		// process code blocks with the label 'checkboxs'
-		this.registerMarkdownCodeBlockProcessor('checkboxs', (source, el, ctx) => {
-			const def = parseYaml(source);
-			console.log(def);
-			el.createEl('h2', { text: def.title });
-			const boxContainer = el.createDiv({ id: def.includes, cls: 'el-ul' });
-			const listContainer = boxContainer.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
-			for (let item of def.boxes.list) {
-				for (let property in item) {
-					const li = listContainer.createEl('li', { cls: 'task-list-item' });
-					const cb = li.createEl("input", { type: "checkbox", cls:'task-list-item-checkbox' });
-					cb.setAttribute('_tag', property);
-					li.appendText(property);
-					cb.onchange = async () => {
-						const currentFile: TFile | null = this.app.workspace.getActiveFile();
-						console.log(currentFile);
-						const tag = cb.getAttribute('_tag');
-						if (currentFile) {
-							await this.app.fileManager.processFrontMatter(currentFile, fm => {
-								console.log(fm)
-								if (fm.tags) {
-									if (!fm.tags.includes(tag))
-										fm.tags.push(tag)
-									else
-										fm.tags = fm.tags.filter(val => val !== tag);
-								}
-								console.log(fm)
-							});
-						}
-						console.log(currentFile.frontmatter)
-						// let tags = dv.current().file.frontmatter.tags;
-						// if (cb.checked) {
-						// 	if (!tags.includes(item)) tags.push(item);
-						// } else {
-						// 	tags = tags.filter(v => v !== item);
-						// }
-						// // Write back to front‑matter
-						// console.log(tags)
-						// console.log(dv.current().file)
-						// await dv.app.fileManager.processFrontMatter(dv.current().file,
-						// 	fm => {
-						// 	debugger
-						// 		fm['tags'] = tags;
-						// 		console.log(fm)
-						// 	}
-						// );
-						// debugger
-						// await dv.io.load(dv.current().file.path); // forces a reload of the file cont
-						// console.log(dv.current().file.frontmatter)
-					};
+		this.registerMarkdownCodeBlockProcessor('checkboxs', async (source, el, ctx) => {
+			try {
+				const def = parseYaml(source);
+				console.log('def'); console.log(def);
+				const currentFile: TFile = this.app.workspace.getActiveFile();
+				let currentFm = null;
+				await this.app.fileManager.processFrontMatter(currentFile, fm => { currentFm = fm });
+				console.log(currentFm)
+				el.createEl('h2', { text: def.title });
+				const boxContainer = el.createDiv({ cls: 'el-ul' });
+				const listContainer = boxContainer.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
+				for (let item of def.boxesp) {
+					for (let property in item) {
+						const li = listContainer.createEl('li', { cls: 'task-list-item' });
+						const cb = li.createEl("input", { type: "checkbox", cls:'task-list-item-checkbox' });
+						cb.setAttribute('_tag', property);
+						li.appendText(property);
+						cb.checked = currentFm.tags.includes(property);
+						cb.onchange = async () => {
+							console.log(currentFile);
+							const tag = cb.getAttribute('_tag');
+							if (currentFile) {
+								await this.app.fileManager.processFrontMatter(currentFile, fm => {
+									console.log(fm)
+									if (fm.tags) {
+										if (!fm.tags.includes(tag))
+											fm.tags.push(tag)
+										else
+											fm.tags = fm.tags.filter(val => val !== tag);
+									}
+									console.log(fm)
+								});
 							}
-			}
+						};
+					}
+				}
+			} finally {
+				console.log('All good!')
+			} // decide what to do here
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-		// 	console.log('click', evt);
-		// });
 	}
 
 	onunload() {
