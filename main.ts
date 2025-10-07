@@ -1,13 +1,15 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, parseYaml, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 
 interface PlayWithCheckboxsSettings {
 	mySetting: string;
+	size: number;
 }
 
 const DEFAULT_SETTINGS: PlayWithCheckboxsSettings = {
-	mySetting: 'default'
+	mySetting: 'default',
+	size: 1234
 }
 
 export default class PlayWithCheckboxs extends Plugin {
@@ -21,47 +23,61 @@ export default class PlayWithCheckboxs extends Plugin {
 			// Called when the user clicks the icon.
 			new Notice('Lets Play!');
 		});
+
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, _view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+		// process code blocks with the label 'checkboxs'
+		this.registerMarkdownCodeBlockProcessor('checkboxs', (source, el, ctx) => {
+			const def = parseYaml(source);
+			console.log(def);
+			el.createEl('h2', { text: def.title });
+			const boxContainer = el.createDiv({ id: def.includes, cls: 'el-ul' });
+			const listContainer = boxContainer.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
+			for (let item of def.boxes.list) {
+				for (let property in item) {
+					const li = listContainer.createEl('li', { cls: 'task-list-item' });
+					const cb = li.createEl("input", { type: "checkbox", cls:'task-list-item-checkbox' });
+					cb.setAttribute('_tag', property);
+					li.appendText(property);
+					cb.onchange = async () => {
+						const currentFile: TFile | null = this.app.workspace.getActiveFile();
+						console.log(currentFile);
+						const tag = cb.getAttribute('_tag');
+						if (currentFile) {
+							await this.app.fileManager.processFrontMatter(currentFile, fm => {
+								console.log(fm)
+								if (fm.tags) {
+									if (!fm.tags.includes(tag))
+										fm.tags.push(tag)
+									else
+										fm.tags = fm.tags.filter(val => val !== tag);
+								}
+								console.log(fm)
+							});
+						}
+						console.log(currentFile.frontmatter)
+						// let tags = dv.current().file.frontmatter.tags;
+						// if (cb.checked) {
+						// 	if (!tags.includes(item)) tags.push(item);
+						// } else {
+						// 	tags = tags.filter(v => v !== item);
+						// }
+						// // Write back to front‑matter
+						// console.log(tags)
+						// console.log(dv.current().file)
+						// await dv.app.fileManager.processFrontMatter(dv.current().file,
+						// 	fm => {
+						// 	debugger
+						// 		fm['tags'] = tags;
+						// 		console.log(fm)
+						// 	}
+						// );
+						// debugger
+						// await dv.io.load(dv.current().file.path); // forces a reload of the file cont
+						// console.log(dv.current().file.frontmatter)
+					};
+							}
 			}
 		});
 
@@ -70,12 +86,9 @@ export default class PlayWithCheckboxs extends Plugin {
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+		// 	console.log('click', evt);
+		// });
 	}
 
 	onunload() {
