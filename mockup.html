@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<link type="text/css" href="styles.css">
+<body>
+    <h1>This is a mock up</h1>
+    <div id="id01" class="el-ul">
+        <ul class="contains-task-list has-list-bullet">
+            <li class="task-list-item">
+                <input type="checkbox" class="task-list-item-checkbox" _property="Run" _tag="run">
+                Run
+                <ul class="contains-task-list has-list-bullet">
+                    <li class="task-list-item">
+                        <input type="checkbox" class="task-list-item-checkbox" _property="Long" _tag="run/long">
+                        Long
+                    </li>
+                    <li class="task-list-item">
+                        <input type="checkbox" class="task-list-item-checkbox" _property="Regular" _tag="run/regular">
+                        Regular
+                        <ul class="contains-task-list has-list-bullet">
+                            <li class="task-list-item">
+                                <input type="checkbox" class="task-list-item-checkbox" _property="Slow" _tag="run/regular/slow">
+                                Slow
+                            </li>
+                            <li class="task-list-item">
+                                <input type="checkbox" class="task-list-item-checkbox" _property="Jeffing" _tag="run/regular/jeffing">
+                                Jeffing
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li class="task-list-item">
+                <input type="checkbox" class="task-list-item-checkbox" _property="Hike" _tag="hike">
+                Hike
+            </li>
+            <li class="task-list-item">
+                <input type="checkbox" class="task-list-item-checkbox" _property="Kayak" _tag="kayak">
+                Kayak
+            </li>
+        </ul>
+    </div>
+    <script>
+        const getParentCb = (cb) => {
+            let result = null;
+            try {
+                result = cb.closest('ul').closest('li').children[0];
+            } finally {
+                return result;
+            }
+        }
+        const cbListen = (event) => {
+            if (event.target.type === 'checkbox') {
+                const cb = event.target;
+                if (!cb.checked) { // Clear the child boxs
+                    const li = cb.closest('li');
+                    const cbs = li.querySelectorAll('input[type=checkbox]');
+                    cbs.forEach(box => {
+                        if (box !== cb) box.checked = false;
+                    });
+                } else { // check
+                    let parentCb = getParentCb(cb);
+                    while (parentCb && !parentCb.checked) {
+                        parentCb.checked = true;
+                        parentCb = getParentCb(parentCb)
+                    }
+                }
+                // clear tags for cb and children
+            }
+        }
+        const cbDiv = document.getElementById('id01');
+        cbDiv.addEventListener('change', cbListen);
+    </script>
+</body>

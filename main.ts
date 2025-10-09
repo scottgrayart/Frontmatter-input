@@ -3,8 +3,6 @@ import { App, Editor, MarkdownView,
 	PluginSettingTab, Setting, TFile
 } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
-
 interface PlayWithCheckboxsSettings {
 	mySetting: string;
 	size: number;
@@ -15,11 +13,20 @@ const DEFAULT_SETTINGS: PlayWithCheckboxsSettings = {
 	size: 1234
 }
 
+function* cbDivIdGen(prefix: string): IterableIterator<string> {
+    let i = 0;
+	while (true) {
+		let result = prefix + '-' + (++i).toString().padStart(5, '0');
+		yield result;
+	}
+}
 export default class PlayWithCheckboxs extends Plugin {
 	settings: PlayWithCheckboxsSettings;
 
 	async onload() {
 		await this.loadSettings();
+
+		const cbDivId = cbDivIdGen('cbid');
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('dice', 'Greet', (_evt: MouseEvent) => {
@@ -32,42 +39,32 @@ export default class PlayWithCheckboxs extends Plugin {
 
 		// process code blocks with the label 'checkboxs'
 		this.registerMarkdownCodeBlockProcessor('checkboxs', async (source, el, ctx) => {
+			const processCbList = (container: HTMLElement, boxes: Array<any>, fm: any, tagPre: String) => {
+				const listContainer = container.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
+				for (let item of boxes) {
+					for (let property in item) {
+						const li = listContainer.createEl('li', { cls: 'task-list-item' });
+						const cb = li.createEl("input", { type: "checkbox", cls:'task-list-item-checkbox' });
+						const cbTag = `${tagPre}${item[property].tag}`;
+						const cbTagRegx = new RegExp(cbTag + '.*');
+						cb.setAttribute('_tag', cbTag);
+						li.appendText(property);
+						cb.checked = (fm !== null && fm.tags.some((tag) => cbTagRegx.test(tag)));
+						if (item[property].boxes)
+							processCbList(li, item[property].boxes, fm, cbTag + '/');
+					}
+				}
+			}
 			try {
 				const def = parseYaml(source);
 				const currentFile: TFile | null = this.app.workspace.getActiveFile();
-				let currentFm = null;
+				let currentFm: any = null;
+				const boxContainer = el.createDiv({ cls: 'el-ul' });
+				boxContainer.id = cbDivId.next().value;
 				if (currentFile) {
 					await this.app.fileManager.processFrontMatter(currentFile, fm => { currentFm = fm });
-					console.log(currentFm)
 					el.createEl('h2', { text: def.title });
-					const boxContainer = el.createDiv({ cls: 'el-ul' });
-					const listContainer = boxContainer.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
-					for (let item of def.boxes) {
-						for (let property in item) {
-							const li = listContainer.createEl('li', { cls: 'task-list-item' });
-							const cb = li.createEl("input", { type: "checkbox", cls:'task-list-item-checkbox' });
-							cb.setAttribute('_tag', property);
-							li.appendText(property);
-							cb.checked = (currentFm !== null && currentFm.tags.includes(property));
-							cb.onchange = async () => {
-								console.log(currentFile);
-								const tag = cb.getAttribute('_tag');
-								if (currentFile) {
-									await this.app.fileManager.processFrontMatter(currentFile, fm => {
-										console.log(fm)
-										if (fm.tags) {
-											if (!fm.tags.includes(tag))
-												fm.tags.push(tag)
-											else
-												fm.tags = fm.tags.filter(val => val !== tag);
-										}
-										console.log(fm)
-									});
-								}
-							};
-						}
-					}
-
+					processCbList(boxContainer,def.boxes, currentFm, '');
 				}
 			} finally {
 				console.log('All good!')
