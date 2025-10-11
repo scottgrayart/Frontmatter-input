@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView,
+import { App, Editor, FileManager, MarkdownView,
 	Modal, Notice, parseYaml, Plugin,
 	PluginSettingTab, Setting, TFile
 } from 'obsidian';
@@ -39,6 +39,9 @@ export default class PlayWithCheckboxs extends Plugin {
 
 		// process code blocks with the label 'checkboxs'
 		this.registerMarkdownCodeBlockProcessor('checkboxs', async (source, el, ctx) => {
+			const currentFile: TFile | null = this.app.workspace.getActiveFile();
+			let currentFm: any = null;
+
 			const processCbList = (container: HTMLElement, boxes: Array<any>, fm: any, tagPre: String) => {
 				const listContainer = container.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
 				for (let item of boxes) {
@@ -49,23 +52,67 @@ export default class PlayWithCheckboxs extends Plugin {
 						const cbTagRegx = new RegExp(cbTag + '.*');
 						cb.setAttribute('_tag', cbTag);
 						li.appendText(property);
-						cb.checked = (fm !== null && fm.tags.some((tag) => cbTagRegx.test(tag)));
+						cb.checked = (fm !== null && fm.tags.some((tag: any) => cbTagRegx.test(tag)));
 						if (item[property].boxes)
 							processCbList(li, item[property].boxes, fm, cbTag + '/');
 					}
 				}
 			}
+			const getParentCb = (cb: any) => {
+				let result = null;
+				try {
+					result = cb.closest('ul').closest('li').children[0];
+				} finally {
+					return result;
+				}
+			}
+			const cbListen = async (event: any) => {
+				if (event.target.type === 'checkbox') {
+					const cb = event.target;
+					if (!cb.checked) { // Clear the child boxs
+						const li = cb.closest('li');
+						const cbs = li.querySelectorAll('input[type=checkbox]');
+						cbs.forEach((box: any) => {
+							if (box !== cb) box.checked = false;
+						});
+					} else { // check
+						let parentCb = getParentCb(cb);
+						while (parentCb && !parentCb.checked) {
+							parentCb.checked = true;
+							parentCb = getParentCb(parentCb)
+						}
+					}
+					// clear tags for cb and children
+					const cbTag = event.target.getAttribute('_tag');
+					const cbTagRegx = new RegExp(cbTag + '.*');
+					let filteredTags = currentFm.tags.filter((tag:any) => !cbTagRegx.test(tag));
+					console.log(currentFm.tags)
+					console.log(filteredTags)
+					if (currentFile) {
+						await this.app.fileManager.processFrontMatter(currentFile, fm => {
+							if (cb.checked) {
+								console.log('checked', cbTag, filteredTags)
+								filteredTags.push(cbTag);
+							} else {
+								const parentCb = getParentCb(cb);
+								console.log('unchecked', parentCb.getAttribute('_tag'), filteredTags)
+								if (parentCb) filteredTags = [parentCb.getAttribute('_tag'), ...filteredTags];
+							}
+							fm.tags = filteredTags;
+							console.log(fm);
+						})
+					}
+				}
+			}
 			try {
 				const def = parseYaml(source);
-				const currentFile: TFile | null = this.app.workspace.getActiveFile();
-				let currentFm: any = null;
 				const boxContainer = el.createDiv({ cls: 'el-ul' });
 				boxContainer.id = cbDivId.next().value;
 				if (currentFile) {
 					await this.app.fileManager.processFrontMatter(currentFile, fm => { currentFm = fm });
-					el.createEl('h2', { text: def.title });
 					processCbList(boxContainer,def.boxes, currentFm, '');
 				}
+				boxContainer.onchange = cbListen;
 			} finally {
 				console.log('All good!')
 			} // decide what to do here
