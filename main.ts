@@ -3,16 +3,6 @@ import { App, Editor, FileManager, MarkdownView,
 	PluginSettingTab, Setting, TFile
 } from 'obsidian';
 
-interface PlayWithCheckboxsSettings {
-	mySetting: string;
-	size: number;
-}
-
-const DEFAULT_SETTINGS: PlayWithCheckboxsSettings = {
-	mySetting: 'default',
-	size: 1234
-}
-
 function* cbDivIdGen(prefix: string): IterableIterator<string> {
     let i = 0;
 	while (true) {
@@ -21,11 +11,7 @@ function* cbDivIdGen(prefix: string): IterableIterator<string> {
 	}
 }
 export default class PlayWithCheckboxs extends Plugin {
-	settings: PlayWithCheckboxsSettings;
-
 	async onload() {
-		await this.loadSettings();
-
 		const cbDivId = cbDivIdGen('cbid');
 
 		// This creates an icon in the left ribbon.
@@ -37,10 +23,11 @@ export default class PlayWithCheckboxs extends Plugin {
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
+		let currentFm: any = null; // This is common to all codeblocks
+
 		// process code blocks with the label 'checkboxs'
 		this.registerMarkdownCodeBlockProcessor('checkboxs', async (source, el, ctx) => {
 			const currentFile: TFile | null = this.app.workspace.getActiveFile();
-			let currentFm: any = null;
 
 			const processCbList = (container: HTMLElement, boxes: Array<any>, fm: any, tagPre: String) => {
 				const listContainer = container.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
@@ -86,20 +73,19 @@ export default class PlayWithCheckboxs extends Plugin {
 					const cbTag = event.target.getAttribute('_tag');
 					const cbTagRegx = new RegExp(cbTag + '.*');
 					let filteredTags = currentFm.tags.filter((tag:any) => !cbTagRegx.test(tag));
-					console.log(currentFm.tags)
-					console.log(filteredTags)
 					if (currentFile) {
 						await this.app.fileManager.processFrontMatter(currentFile, fm => {
 							if (cb.checked) {
-								console.log('checked', cbTag, filteredTags)
-								filteredTags.push(cbTag);
+								if (!filteredTags.includes(cbTag))
+									filteredTags.push(cbTag);
 							} else {
 								const parentCb = getParentCb(cb);
-								console.log('unchecked', parentCb.getAttribute('_tag'), filteredTags)
-								if (parentCb) filteredTags = [parentCb.getAttribute('_tag'), ...filteredTags];
+								if (parentCb) {
+									filteredTags = [parentCb.getAttribute('_tag'), ...filteredTags];
+								}
 							}
 							fm.tags = filteredTags;
-							console.log(fm);
+							currentFm.tags = fm.tags;
 						})
 					}
 				}
@@ -113,66 +99,13 @@ export default class PlayWithCheckboxs extends Plugin {
 					processCbList(boxContainer,def.boxes, currentFm, '');
 				}
 				boxContainer.onchange = cbListen;
-			} finally {
-				console.log('All good!')
+			} catch(e) {
+				console.trace(e.message)
 			} // decide what to do here
 		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
 	}
-
 	onunload() {
 
 	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: PlayWithCheckboxs;
-
-	constructor(app: App, plugin: PlayWithCheckboxs) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
