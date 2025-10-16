@@ -35,12 +35,17 @@ export default class PlayWithCheckboxs extends Plugin {
 					for (let property in item) {
 						const li = listContainer.createEl('li', { cls: 'task-list-item' });
 						const cb = li.createEl("input", { type: "checkbox", cls:'task-list-item-checkbox' });
-						const cbTag = `${tagPre}${item[property].tag}`;
-						const cbTagRegx = new RegExp(cbTag + '.*');
-						cb.setAttribute('_tag', cbTag);
+						let cbTag = '';
+						// set tag attribute
+						if (item[property] && item[property].tag) {
+							cbTag = item[property] && item[property].tag
+										? `${tagPre}${item[property].tag}` : '';
+							const cbTagRegx = new RegExp(cbTag + '.*');
+							cb.setAttribute('_tag', cbTag);
+							cb.checked = (fm && fm.tags && fm.tags.some((tag: any) => cbTagRegx.test(tag)));
+						}
 						li.appendText(property);
-						cb.checked = (fm !== null && fm.tags.some((tag: any) => cbTagRegx.test(tag)));
-						if (item[property].boxes)
+						if (item[property] && item[property].boxes)
 							processCbList(li, item[property].boxes, fm, cbTag + '/');
 					}
 				}
@@ -72,7 +77,9 @@ export default class PlayWithCheckboxs extends Plugin {
 					// clear tags for cb and children
 					const cbTag = event.target.getAttribute('_tag');
 					const cbTagRegx = new RegExp(cbTag + '.*');
-					let filteredTags = currentFm.tags.filter((tag:any) => !cbTagRegx.test(tag));
+					let filteredTags = currentFm && currentFm.tags
+									 ? currentFm.tags.filter((tag:any) => !cbTagRegx.test(tag))
+									 : [];
 					if (currentFile) {
 						await this.app.fileManager.processFrontMatter(currentFile, fm => {
 							if (cb.checked) {
@@ -92,6 +99,10 @@ export default class PlayWithCheckboxs extends Plugin {
 			}
 			try {
 				const def = parseYaml(source);
+				if (!def || !def.boxes) {
+					el.createEl('div', { text: 'No boxes defined' });
+					return;
+				}
 				const boxContainer = el.createDiv({ cls: 'el-ul' });
 				boxContainer.id = cbDivId.next().value;
 				if (currentFile) {
