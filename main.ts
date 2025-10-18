@@ -3,64 +3,56 @@ import { App, Editor, FileManager, MarkdownView,
 	PluginSettingTab, Setting, TFile
 } from 'obsidian';
 
-function* cbDivIdGen(prefix: string): IterableIterator<string> {
-    let i = 0;
-	while (true) {
-		let result = prefix + '-' + (++i).toString().padStart(5, '0');
-		yield result;
-	}
-}
-export default class PlayWithCheckboxs extends Plugin {
+export default class FrontmatterInput extends Plugin {
 	async onload() {
-		const cbDivId = cbDivIdGen('cbid');
-		const cbRadioName = cbDivIdGen('cbrn');
+		function* elementIdGen(prefix: string): IterableIterator<string> {
+			let i = 0;
+			while (true) {
+				let result = prefix + '-' + (++i).toString().padStart(5, '0');
+				yield result;
+			}
+		}
+		const fmiDivId = elementIdGen('fmiDivid');
+		const fmiRadioName = elementIdGen('fmiRadioName');
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Greet', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('Lets Play!');
-		});
-
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// process code blocks with the label 'checkboxs'
-		this.registerMarkdownCodeBlockProcessor('checkboxs', async (source, el, ctx) => {
+		// process code blocks with the label 'frontmatterinput'
+		this.registerMarkdownCodeBlockProcessor('frontmatterinput', async (source, el, ctx) => {
 			const currentFile: TFile | null = this.app.workspace.getActiveFile();
 
-			const processCbList = async (container: HTMLElement, def: any, tagPre: String) => {
+			const processInputList = async (container: HTMLElement, def: any, tagPre: String) => {
 				const listContainer = container.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
-				const rdName = def.type === 'radio' ? cbRadioName.next().value : null;
+				const rdName = def.type === 'radio' ? fmiRadioName.next().value : null;
 				let fm: any = {};
 				if (!currentFile) return;
 				await this.app.fileManager.processFrontMatter(currentFile, fmData => { fm = fmData });
-				for (let item of def.boxes) {
+				for (let item of def.btns) {
 					for (let property in item) {
 						const li = listContainer.createEl('li', { cls: 'task-list-item' });
-						const cb = li.createEl("input", {
+						// create checkbox or radio button, default to checkbox
+						const btn = li.createEl("input", {
 								type: def.type ? def.type : 'checkbox',
 								cls:'task-list-item-checkbox'
 							});
-						if (cb.type === 'radio') cb.name = rdName!;
-						let cbTag = '';
+						if (btn.type === 'radio') btn.name = rdName!;
+						let btnTag = '';
 						// set tag attribute
 						if (item[property] && item[property].tag) {
-							cbTag = item[property] && item[property].tag
-										? `${tagPre}${item[property].tag}` : '';
-							const cbTagRegx = new RegExp(`^${cbTag}.*`);
-							cb.setAttribute('_tag', cbTag);
-							cb.checked = (fm && fm.tags && fm.tags.some((tag: any) => cbTagRegx.test(tag)));
+							btnTag = item[property] && item[property].tag
+								  ? `${tagPre}${item[property].tag}` : '';
+							const btnTagRegx = new RegExp(`^${btnTag}.*`);
+							btn.setAttribute('_tag', btnTag);
+							btn.checked = (fm && fm.tags && fm.tags.some((tag: any) => btnTagRegx.test(tag)));
 						}
 						li.appendText(property);
-						if (item[property] && item[property].boxes)
-							await processCbList(li, item[property], cbTag + '/');
+						if (item[property] && item[property].btns)
+							await processInputList(li, item[property], btnTag + '/');
 					}
 				}
 			}
-			const getParentCb = (cb: any) => {
+			const getParentBtn = (btn: any) => {
 				let result = null;
 				try {
-					result = cb.closest('ul').closest('li').children[0];
+					result = btn.closest('ul').closest('li').children[0];
 				} finally {
 					return result;
 				}
@@ -78,44 +70,33 @@ export default class PlayWithCheckboxs extends Plugin {
 					}
 				});
 			}
-			const cbListen = async (event: any) => {
+			const btnListen = async (event: any) => {
 				if (['checkbox', 'radio'].includes(event.target.type)) {
-					const cb = event.target;
-					if (!cb.checked) { // Clear the child boxs
-						const li = cb.closest('li');
+					const btn = event.target;
+					if (!btn.checked) { // Clear the child boxs
+						const li = btn.closest('li');
 						const cbs = li.querySelectorAll('input[type=checkbox], input[type=radio]');
 						cbs.forEach((box: any) => {
-							if (box !== cb) box.checked = false;
+							if (box !== btn) box.checked = false;
 						});
-					} else { // checked checkbox - set parent boxes
-						let parentCb = getParentCb(cb);
+					} else { // checked checkbox - set parent btns
+						let parentCb = getParentBtn(btn);
 						while (parentCb && !parentCb.checked) {
 							parentCb.checked = true;
 							if (parentCb.type === 'radio') {
 								clearSiblingInputs(parentCb);
 							}
-							parentCb = getParentCb(parentCb)
+							parentCb = getParentBtn(parentCb)
 						}
 					}
-					if (cb.type === 'radio') {
-						// for radio buttons, uncheck sibling boxes and children
-						clearSiblingInputs(cb);
-						// const ul = cb.closest('ul');
-						// const cbs = ul.querySelectorAll('input[type=radio][name="' + cb.name + '"]');
-						// cbs.forEach((box: any) => {
-						// 	if (box !== cb) {
-						// 		box.checked = false;
-						// 		const childIputs = box.closest('li').querySelectorAll('input[type=checkbox], input[type=radio]');
-						// 		childIputs.forEach((childBox: any) => {
-						// 			if (childBox !== cb) childBox.checked = false;
-						// 		});
-						// 	}
-						// });
+					if (btn.type === 'radio') {
+						// for radio buttons, uncheck sibling btns and children
+						clearSiblingInputs(btn);
 					}
 					if (currentFile) {
 						// Clear all input tags from front matter
 						await this.app.fileManager.processFrontMatter(currentFile, fmData => {
-							const div = cb.closest('div.el-ul');
+							const div = btn.closest('div.el-ul');
 							const inputs:string[] = Array.from(div.querySelectorAll('input[type=checkbox], input[type=radio]'));
 							const allTags:string[] = inputs.reduce((tags: string[], input: any) => {;
 								tags.push(input.getAttribute('_tag'));
@@ -124,9 +105,9 @@ export default class PlayWithCheckboxs extends Plugin {
 							fmData.tags = fmData.tags.filter((tag: any) => !allTags.includes(tag));
 						});
 
-						// Now set tags based on checked boxes
+						// Now set tags based on checked btns
 						await this.app.fileManager.processFrontMatter(currentFile, fmData => {
-							const div = cb.closest('div.el-ul');
+							const div = btn.closest('div.el-ul');
 							const inputs:string[] = Array.from(div.querySelectorAll('input[type=checkbox]:checked, input[type=radio]:checked'));
 							const checkedTags:string[] = inputs.reduce((tags: string[], input: any) => {;
 								tags.push(input.getAttribute('_tag'));
@@ -143,17 +124,17 @@ export default class PlayWithCheckboxs extends Plugin {
 			}
 			try {
 				const def = parseYaml(source);
-				if (!def || !def.boxes) {
-					el.createEl('div', { text: 'No boxes defined' });
+				if (!def || !def.btns) {
+					el.createEl('div', { text: 'No btns defined' });
 					return;
 				}
 				const boxContainer = el.createDiv({ cls: 'el-ul' });
-				boxContainer.id = cbDivId.next().value;
-				await processCbList(boxContainer,def, '');
-				boxContainer.onchange = cbListen;
+				boxContainer.id = fmiDivId.next().value;
+				await processInputList(boxContainer,def, '');
+				boxContainer.onchange = btnListen;
 			} catch(e) {
 				console.trace(e.message)
-			} // decide what to do here
+			}
 		});
 	}
 	onunload() {
