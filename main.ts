@@ -13,6 +13,7 @@ function* cbDivIdGen(prefix: string): IterableIterator<string> {
 export default class PlayWithCheckboxs extends Plugin {
 	async onload() {
 		const cbDivId = cbDivIdGen('cbid');
+		const cbRadioName = cbDivIdGen('cbrn');
 
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('dice', 'Greet', (_evt: MouseEvent) => {
@@ -23,18 +24,24 @@ export default class PlayWithCheckboxs extends Plugin {
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-		let currentFm: any = null; // This is common to all codeblocks
-
 		// process code blocks with the label 'checkboxs'
 		this.registerMarkdownCodeBlockProcessor('checkboxs', async (source, el, ctx) => {
 			const currentFile: TFile | null = this.app.workspace.getActiveFile();
 
-			const processCbList = (container: HTMLElement, boxes: Array<any>, fm: any, tagPre: String) => {
+			const processCbList = (container: HTMLElement, def: any, tagPre: String) => {
 				const listContainer = container.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
-				for (let item of boxes) {
+				const rdName = def.type === 'radio' ? cbRadioName.next().value : null;
+				let fm: any = {};
+				if (!currentFile) return;
+				this.app.fileManager.processFrontMatter(currentFile, fmData => { fm = fmData });
+				for (let item of def.boxes) {
 					for (let property in item) {
 						const li = listContainer.createEl('li', { cls: 'task-list-item' });
-						const cb = li.createEl("input", { type: "checkbox", cls:'task-list-item-checkbox' });
+						const cb = li.createEl("input", {
+								type: def.type ? def.type : 'checkbox',
+								cls:'task-list-item-checkbox'
+							});
+						if (cb.type === 'radio') cb.name = rdName!;
 						let cbTag = '';
 						// set tag attribute
 						if (item[property] && item[property].tag) {
@@ -46,7 +53,7 @@ export default class PlayWithCheckboxs extends Plugin {
 						}
 						li.appendText(property);
 						if (item[property] && item[property].boxes)
-							processCbList(li, item[property].boxes, fm, cbTag + '/');
+							processCbList(li, item[property], cbTag + '/');
 					}
 				}
 			}
@@ -59,42 +66,82 @@ export default class PlayWithCheckboxs extends Plugin {
 				}
 			}
 			const cbListen = async (event: any) => {
-				if (event.target.type === 'checkbox') {
+				if (['checkbox', 'radio'].includes(event.target.type)) {
 					const cb = event.target;
 					if (!cb.checked) { // Clear the child boxs
 						const li = cb.closest('li');
-						const cbs = li.querySelectorAll('input[type=checkbox]');
+						const cbs = li.querySelectorAll('input[type=checkbox], input[type=radio]');
 						cbs.forEach((box: any) => {
 							if (box !== cb) box.checked = false;
 						});
-					} else { // check
+					} else { // checked checkbox - set parent boxes
 						let parentCb = getParentCb(cb);
 						while (parentCb && !parentCb.checked) {
 							parentCb.checked = true;
 							parentCb = getParentCb(parentCb)
 						}
 					}
-					// clear tags for cb and children
-					const cbTag = event.target.getAttribute('_tag');
-					const cbTagRegx = new RegExp(cbTag + '.*');
-					let filteredTags = currentFm && currentFm.tags
-									 ? currentFm.tags.filter((tag:any) => !cbTagRegx.test(tag))
-									 : [];
-					if (currentFile) {
-						await this.app.fileManager.processFrontMatter(currentFile, fm => {
-							if (cb.checked) {
-								if (!filteredTags.includes(cbTag))
-									filteredTags.push(cbTag);
-							} else {
-								const parentCb = getParentCb(cb);
-								if (parentCb) {
-									filteredTags = [parentCb.getAttribute('_tag'), ...filteredTags];
-								}
+					if (cb.type === 'radio') {
+						// for radio buttons, uncheck sibling boxes
+						const ul = cb.closest('ul');
+						const cbs = ul.querySelectorAll('input[type=radio][name="' + cb.name + '"]');
+						cbs.forEach((box: any) => {
+							if (box !== cb) {
+								box.checked = false;
+								const childIputs = box.closest('li').querySelectorAll('input[type=checkbox], input[type=radio]');
+								childIputs.forEach((childBox: any) => {
+									if (childBox !== cb) childBox.checked = false;
+								});
 							}
-							fm.tags = filteredTags;
-							currentFm.tags = fm.tags;
-						})
+						});
 					}
+					if (!currentFile) return;
+					// Clear all input tags from front matter
+					await this.app.fileManager.processFrontMatter(currentFile, fmData => {
+						const div = cb.closest('div.el-ul');
+						const inputs:string[] = Array.from(div.querySelectorAll('input[type=checkbox], input[type=radio]'));
+						const allTags:string[] = inputs.reduce((tags: string[], input: any) => {;
+							tags.push(input.getAttribute('_tag'));
+							return tags;
+						}, []);
+						fmData.tags = fmData.tags.filter((tag: any) => !allTags.includes(tag));
+					});
+
+					// Now set tags based on checked boxes
+					await this.app.fileManager.processFrontMatter(currentFile, fmData => {
+						const div = cb.closest('div.el-ul');
+						const inputs:string[] = Array.from(div.querySelectorAll('input[type=checkbox]:checked, input[type=radio]:checked'));
+						const checkedTags:string[] = inputs.reduce((tags: string[], input: any) => {;
+							tags.push(input.getAttribute('_tag'));
+							return tags;
+						}, []);
+						checkedTags.reverse().forEach(tag => {
+							if (!fmData.tags.some((t: any) => new RegExp(tag + '.*').test(t))) {
+								fmData.tags.push(tag);
+							}
+						});
+					});
+					// const cbTag = cb.getAttribute('_tag');
+					// const cbTagRegx = new RegExp(
+					// 	(cb.type === 'checkbox' ? cbTag : getParentCb(cb).getAttribute('_tag')) + '.*');
+					// let filteredTags = currentFm && currentFm.tags
+					// 				 ? currentFm.tags.filter((tag:any) => !cbTagRegx.test(tag))
+					// 				 : [];
+					// if (currentFile) {
+					// 	await this.app.fileManager.processFrontMatter(currentFile, fm => {
+					// 		if (cb.checked) {
+					// 			if (!filteredTags.includes(cbTag))
+					// 				filteredTags.push(cbTag);
+					// 		} else {
+					// 			const parentCb = getParentCb(cb);
+					// 			if (parentCb) {
+					// 				filteredTags = [parentCb.getAttribute('_tag'), ...filteredTags];
+					// 			}
+					// 		}
+					// 		fm.tags = filteredTags;
+					// 		currentFm.tags = fm.tags;
+					// 	})
+					// }
 				}
 			}
 			try {
@@ -105,10 +152,7 @@ export default class PlayWithCheckboxs extends Plugin {
 				}
 				const boxContainer = el.createDiv({ cls: 'el-ul' });
 				boxContainer.id = cbDivId.next().value;
-				if (currentFile) {
-					await this.app.fileManager.processFrontMatter(currentFile, fm => { currentFm = fm });
-					processCbList(boxContainer,def.boxes, currentFm, '');
-				}
+				processCbList(boxContainer,def, '');
 				boxContainer.onchange = cbListen;
 			} catch(e) {
 				console.trace(e.message)
