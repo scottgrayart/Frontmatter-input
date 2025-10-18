@@ -65,6 +65,19 @@ export default class PlayWithCheckboxs extends Plugin {
 					return result;
 				}
 			}
+			const clearSiblingInputs = (input: any) => {
+				const ul = input.closest('ul');
+				const inputs = ul.querySelectorAll(`input[type=radio][name="${input.name}"]`);
+				inputs.forEach((btn: any) => {
+					if (btn !== input) {
+						btn.checked = false;
+						const childIputs = btn.closest('li').querySelectorAll('input[type=checkbox], input[type=radio]');
+						childIputs.forEach((childBtn: any) => {
+							if (childBtn !== input) childBtn.checked = false;
+						});
+					}
+				});
+			}
 			const cbListen = async (event: any) => {
 				if (['checkbox', 'radio'].includes(event.target.type)) {
 					const cb = event.target;
@@ -78,22 +91,26 @@ export default class PlayWithCheckboxs extends Plugin {
 						let parentCb = getParentCb(cb);
 						while (parentCb && !parentCb.checked) {
 							parentCb.checked = true;
+							if (parentCb.type === 'radio') {
+								clearSiblingInputs(parentCb);
+							}
 							parentCb = getParentCb(parentCb)
 						}
 					}
 					if (cb.type === 'radio') {
-						// for radio buttons, uncheck sibling boxes
-						const ul = cb.closest('ul');
-						const cbs = ul.querySelectorAll('input[type=radio][name="' + cb.name + '"]');
-						cbs.forEach((box: any) => {
-							if (box !== cb) {
-								box.checked = false;
-								const childIputs = box.closest('li').querySelectorAll('input[type=checkbox], input[type=radio]');
-								childIputs.forEach((childBox: any) => {
-									if (childBox !== cb) childBox.checked = false;
-								});
-							}
-						});
+						// for radio buttons, uncheck sibling boxes and children
+						clearSiblingInputs(cb);
+						// const ul = cb.closest('ul');
+						// const cbs = ul.querySelectorAll('input[type=radio][name="' + cb.name + '"]');
+						// cbs.forEach((box: any) => {
+						// 	if (box !== cb) {
+						// 		box.checked = false;
+						// 		const childIputs = box.closest('li').querySelectorAll('input[type=checkbox], input[type=radio]');
+						// 		childIputs.forEach((childBox: any) => {
+						// 			if (childBox !== cb) childBox.checked = false;
+						// 		});
+						// 	}
+						// });
 					}
 					if (currentFile) {
 						// Clear all input tags from front matter
