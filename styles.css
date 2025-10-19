@@ -1,0 +1,15 @@
+.horizontal-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 15px; /* Space between items */
+}
+
+.my-plugin-error {
+    color: var(--text-error);
+    /*background-color: var(--background-modifier-error);*/
+    padding: 10px;
+    border-radius: 5px;
+    border-left: 3px solid var(--text-error);
+  }

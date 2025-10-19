@@ -19,12 +19,18 @@ export default class FrontmatterInput extends Plugin {
 		this.registerMarkdownCodeBlockProcessor('frontmatterinput', async (source, el, ctx) => {
 			const currentFile: TFile | null = this.app.workspace.getActiveFile();
 
-			const processInputList = async (container: HTMLElement, def: any, tagPre: String) => {
-				const listContainer = container.createEl('ul', { cls: 'contains-task-list has-list-bullet' });
+			const processInputList = async (container: HTMLElement, def: any, tagPre: String, hide: String = '') => {
+				const orientationCls = def['orientation'] && def.orientation === 'horizontal'
+									 ? 'horizontal-list' : '';
+				const listContainer = container.createEl('ul', { cls: `${orientationCls} contains-task-list has-list-bullet` });
+				listContainer.style.display = `${hide}`;
 				const rdName = def.type === 'radio' ? fmiRadioName.next().value : null;
 				let fm: any = {};
 				if (!currentFile) return;
-				await this.app.fileManager.processFrontMatter(currentFile, fmData => { fm = fmData });
+				await this.app.fileManager.processFrontMatter(currentFile, fmData => {
+					fm = fmData ? fmData : {};
+					if (!fm.tags) fm.tags = [];
+				});
 				for (let item of def.btns) {
 					for (let property in item) {
 						const li = listContainer.createEl('li', { cls: 'task-list-item' });
@@ -45,7 +51,7 @@ export default class FrontmatterInput extends Plugin {
 						}
 						li.appendText(property);
 						if (item[property] && item[property].btns)
-							await processInputList(li, item[property], btnTag + '/');
+							await processInputList(li, item[property], btnTag + '/', btn.checked ? '' : 'none');
 					}
 				}
 			}
@@ -67,6 +73,8 @@ export default class FrontmatterInput extends Plugin {
 						childIputs.forEach((childBtn: any) => {
 							if (childBtn !== input) childBtn.checked = false;
 						});
+						const ul = btn.closest('li').querySelector('ul');
+						if (ul) ul.style.display = 'none';
 					}
 				});
 			}
@@ -79,15 +87,19 @@ export default class FrontmatterInput extends Plugin {
 						cbs.forEach((box: any) => {
 							if (box !== btn) box.checked = false;
 						});
+						const ul = btn.closest('li').querySelector('ul');
+						if (ul) ul.style.display = 'none';
 					} else { // checked checkbox - set parent btns
-						let parentCb = getParentBtn(btn);
-						while (parentCb && !parentCb.checked) {
-							parentCb.checked = true;
-							if (parentCb.type === 'radio') {
-								clearSiblingInputs(parentCb);
+						let parentBtn = getParentBtn(btn);
+						while (parentBtn && !parentBtn.checked) {
+							parentBtn.checked = true;
+							if (parentBtn.type === 'radio') {
+								clearSiblingInputs(parentBtn);
 							}
-							parentCb = getParentBtn(parentCb)
+							parentBtn = getParentBtn(parentBtn)
 						}
+						const ul = btn.closest('li').querySelector('ul');
+						if (ul) ul.style.display = '';
 					}
 					if (btn.type === 'radio') {
 						// for radio buttons, uncheck sibling btns and children
@@ -119,19 +131,27 @@ export default class FrontmatterInput extends Plugin {
 								}
 							});
 						});
-						}
+					}
 				}
 			}
+			let def: any = null;
 			try {
-				const def = parseYaml(source);
+				def = parseYaml(source);
 				if (!def || !def.btns) {
-					el.createEl('div', { text: 'No btns defined' });
+					el.createEl('div', { cls: 'my-plugin-error', text: 'No btns defined' });
 					return;
 				}
-				const boxContainer = el.createDiv({ cls: 'el-ul' });
-				boxContainer.id = fmiDivId.next().value;
-				await processInputList(boxContainer,def, '');
-				boxContainer.onchange = btnListen;
+			} catch(e) {
+				el.createEl('div', {cls: 'my-plugin-error'}).innerHTML = 'YAML Parse Error<p>'
+				+ source.replace(/\n/g, '<br>') + '<br>' + e.message.replaceAll('\n','<br>');
+				//, { text: 'YAML Parse Error<p>' + e.message });
+				return;
+			}
+			try {
+				const fmiContainer = el.createDiv({ cls: 'el-ul' });
+				fmiContainer.id = fmiDivId.next().value;
+				await processInputList(fmiContainer, def, def.root ? def.root + '/' : '');
+				fmiContainer.onchange = btnListen;
 			} catch(e) {
 				console.trace(e.message)
 			}
