@@ -1,97 +1,108 @@
-# play-with-checkboxs
-Obsidian plugin to create checkboxs that set tags
+# Frontmatter Input
 
-# Obsidian Sample Plugin
+An Obsidian plugin for managing tags through intuitive nested checkbox and radio button lists.
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.1-green.svg)](https://github.com/scottgrayart/Frontmatter-input/releases)
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Overview
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+Simplify note organization by adding tags through interactive lists instead of typing them manually. Define checkbox lists for multiple selections or radio buttons for single selections, with support for nested hierarchies. Lists can be embedded in templates or added directly to notes.
+## Features
 
-## First time developing plugins?
+- **Automatic tag management** - Selecting checkboxes or radio buttons automatically updates frontmatter tags
+- **Hierarchical tags** - Nested lists create structured tags like `parent-tag/child-tag/grandchild-tag`. Nested lists are hidden until their parent is selected
+- **Flexible layouts** - Choose vertical or horizontal list orientation
+- **Smart cleanup** - Unchecking a parent automatically removes all child tags
+- **Duplicate prevention** - Only unique tags are stored in frontmatter
+## Demo
+In this example an item is checked with no sub-lists setting the tag 'activity/walk'
+![Example with walk selected](assets/images/Screenshot%202025-10-21%204.11.07%20PM.png)
 
-Quick starting guide for new plugin devs:
+This is the same list with the 'Run' item checked along with two radio button lists to get the tag 'activity/run/race/half'
+![Example with run\/race\/half selected](assets/images/Screenshot%202025-10-21%204.06.56%20PM.png)
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+*Screenshot: Checkbox selections automatically populate frontmatter tags*
 
-## Releasing new releases
+### Source
+This example is generated using YAML in a frontmatterinput block as follows.
+```frontmatterinput
+root: activity
+orientation:  horizontal
+btns:
+- Run:
+    tag: run
+    # orientation: vertical
+    type: radio
+    btns:
+    - regular: { tag: regular }
+    - long: { tag: long }
+    - race:
+        tag: race
+        type: radio
+        orientation: horizontal
+        btns:
+        - 5k: { tag: 5k }
+        - 10k: { tag: 10k }
+        - Half Marathon: { tag: half }
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+- Walk: { tag: walk }
+- Hike: { tag: hike }
+```
+## YAML Syntax Guide
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+This plugin uses YAML to define lists. Here's what you need to know:
 
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint ./src/`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+### Basic Structure
+```frontmatterinput
+# Comments start with #
+key: value
+nested:
+  child: value
+  another: value
 ```
 
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+### Lists
+```frontmatterinput
+# Optional root value to include at the beginning of each tag
+root: root-value
+# orientation: vertical | horizontal (optional, vertical is default)
+orientation: vertical
+# type: checkbox | radio (optional, checkbox is default)
+btns: # required, lists the labels and tags for the list
+  - First item:
+      tag: first-item-value # must follow Obsidian tag name rules
+  - Second item:
+      tag: second-item-value
+  - Third item:
+      tag: third-item-value
 ```
 
-## API Documentation
+### Nesting
+Any btns item can a sub-list under it. Simple add the same structure under the btns item. The 'root' attribute is only used in the main list however. For an example with multiple levels see [Source](#Source) above.
 
-See https://github.com/obsidianmd/obsidian-api
+**Key rules:**
+- Indentation matters (use 2 spaces, not tabs)
+- Colons separate keys from values
+- Dashes create list items
+- Use quotes for values with special characters: `"value: with colon"`
+
+For more details, see [Obsidian's Properties documentation](https://help.obsidian.md/Editing+and+formatting/Properties).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+**FIX THESE LINKS**
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/yourusername)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white)](https://github.com/sponsors/yourusername)
+
+## Contact
+
+- Author: Scott Gray
+- Email: scott@scottgray.art
+- GitHub: [@scottgrayart](https://github.com/scottgrayart)
+- Issues: [Report a bug or request a feature](https://github.com/scottgrayart/Frontmatter-input/issues)
