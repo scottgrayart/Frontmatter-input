@@ -16,16 +16,20 @@ Simplify note organization by adding tags through interactive lists instead of t
 - **Smart cleanup** - Unchecking a parent automatically removes all child tags
 - **Duplicate prevention** - Only unique tags are stored in frontmatter
 ## Demo
-In this example an item is checked with no sub-lists setting the tag 'activity/walk'
-![Example with walk selected](assets/images/Screenshot%202025-10-21%204.11.07%20PM.png)
 
-This is the same list with the 'Run' item checked along with two radio button lists to get the tag 'activity/run/race/half'
-![Example with run\/race\/half selected](assets/images/Screenshot%202025-10-21%204.06.56%20PM.png)
+<p align="center">
+    <img src="assets/images/Screenshot%202025-10-21%204.11.07%20PM.png" alt="Example with walk selected" width="700">
+</p>
+*Screenshot showing single selection*
 
-*Screenshot: Checkbox selections automatically populate frontmatter tags*
+<p align="center">
+    <img src="assets/images/Screenshot%202025-10-21%204.06.56%20PM.png" alt="Example with nested selections" width="700">
+</p>
+*Screenshot showing nested radio button selections*
 
 ### Source
 This example is generated using YAML in a frontmatterinput block as follows.
+````
 ```frontmatterinput
 root: activity
 orientation:  horizontal
@@ -49,11 +53,14 @@ btns:
 - Walk: { tag: walk }
 - Hike: { tag: hike }
 ```
+````
+
 ## YAML Syntax Guide
 
 This plugin uses YAML to define lists. Here's what you need to know:
 
 ### Basic Structure
+````
 ```frontmatterinput
 # Comments start with #
 key: value
@@ -61,8 +68,10 @@ nested:
   child: value
   another: value
 ```
+````
 
 ### Lists
+````
 ```frontmatterinput
 # Optional root value to include at the beginning of each tag
 root: root-value
@@ -70,13 +79,24 @@ root: root-value
 orientation: vertical
 # type: checkbox | radio (optional, checkbox is default)
 btns: # required, lists the labels and tags for the list
-  - First item:
-      tag: first-item-value # must follow Obsidian tag name rules
-  - Second item:
-      tag: second-item-value
-  - Third item:
-      tag: third-item-value
+- First item:
+    tag: first-item-value # must follow Obsidian tag name rules
+- Second item:
+    tag: second-item-value
+- Third item:
+    tag: third-item-value
 ```
+````
+
+Where you are not nesting lists you can use a more terse syntax.
+````
+```frontmatterinput
+btns:
+- First item: { tag: first-item-value }
+- Second item: { tag: second-item-value }
+- Third item: { tag: third-item-value }
+```
+````
 
 ### Nesting
 Any btns item can a sub-list under it. Simple add the same structure under the btns item. The 'root' attribute is only used in the main list however. For an example with multiple levels see [Source](#Source) above.
