@@ -3,7 +3,7 @@
 An Obsidian plugin for managing tags through intuitive nested checkbox and radio button lists.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.1-green.svg)](https://github.com/scottgrayart/Frontmatter-input/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/scottgrayart/Frontmatter-input/releases)
 
 ## Overview
 

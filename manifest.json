@@ -1,11 +1,14 @@
 {
 	"id": "Frontmatter-input",
 	"name": "Frontmatter Input (Checkboxes & Radios)",
-	"version": "1.0.1",
+	"version": "1.0.0",
 	"minAppVersion": "1.4.0",
 	"description": "Use checkboxes and radio buttons in your markdown files to set frontmatter tags.",
 	"author": "Scott Gray",
 	"authorUrl": "https://scottgray.art",
-	"fundingUrl": "",
+	"fundingUrl": {
+		"BuyMeACoffee": "https://www.buymeacoffee.com/scottgrayart",
+		"GitHubSponsors": "https://github.com/sponsors/scottgrayart"
+	},
 	"isDesktopOnly": false
 }

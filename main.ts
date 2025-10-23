@@ -138,11 +138,11 @@ export default class FrontmatterInput extends Plugin {
 			try {
 				def = parseYaml(source);
 				if (!def || !def.btns) {
-					el.createEl('div', { cls: 'my-plugin-error', text: 'No btns defined' });
+					el.createEl('div', { cls: 'fmi-plugin-error', text: 'No btns defined' });
 					return;
 				}
 			} catch(e) {
-				el.createEl('div', {cls: 'my-plugin-error'}).innerHTML = 'YAML Parse Error<p>'
+				el.createEl('div', {cls: 'fmi-plugin-error'}).innerHTML = 'YAML Parse Error<p>'
 				+ source.replace(/\n/g, '<br>') + '<br>' + e.message.replaceAll('\n','<br>');
 				//, { text: 'YAML Parse Error<p>' + e.message });
 				return;

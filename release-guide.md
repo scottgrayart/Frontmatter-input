@@ -26,8 +26,8 @@ Run your build process (typically `npm run build`) to generate:
 ## 4. Create a Git Tag
 
 ```bash
-git tag -a 1.0.1 -m "Release version 1.0.1"
-git push origin 1.0.1
+git tag -a 1.0.0 -m "Release version 1.0.0"
+git push origin 1.0.0
 ```
 
 ## 5. Create a GitHub Release
@@ -36,7 +36,7 @@ git push origin 1.0.1
 2. Click on "Releases" in the right sidebar
 3. Click "Draft a new release"
 4. Select the tag you just created (or create a new one)
-5. Set the release title (e.g., "1.0.1")
+5. Set the release title (e.g., "1.0.0")
 6. Write release notes describing changes
 7. **Attach these files** to the release:
    - `main.js`
