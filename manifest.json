@@ -1,6 +1,6 @@
 {
 	"id": "frontmatter-input",
-	"name": "Frontmatter Input (Checkboxes & Radios)",
+	"name": "Frontmatter Input",
 	"version": "1.0.1",
 	"minAppVersion": "1.4.0",
 	"description": "Use checkboxes and radio buttons in your markdown files to set frontmatter tags.",
