@@ -1,4 +1,11 @@
 Here are the steps to create a public release of an Obsidian plugin on GitHub:
+## New release commands
+# Update version in manifest.json, package.json, versions.json
+git add .
+git commit -m "release: v1.0.4"
+git push origin main
+git tag 1.0.4
+git push origin 1.0.4
 
 ## 1. Prepare Your Plugin
 
